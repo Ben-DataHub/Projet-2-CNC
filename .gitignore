@@ -2,3 +2,5 @@
 __pycache__/
 .env
 data/
+.ipynb_checkpoints/
+TMDB_movie_dataset_v11.csv
