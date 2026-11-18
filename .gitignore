@@ -3,3 +3,6 @@ __pycache__/
 .ipynb_checkpoints/
 .env
 TMDB_movie_dataset_v11.csv
+catalogue_films.csv
+1b_brief_projet_2_recommandation_film.pdf
+2b_guide_donnees_projet_2.pdf
