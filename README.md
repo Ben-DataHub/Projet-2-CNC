@@ -1,16 +1,18 @@
-🎬 Projet 2 — Cinéma CNC & moteur de recommandation
+🎬 Grand Angle — Le ciné à la carte
 
-Réponse à l'appel à projets du CNC : un cinéma à Paris, au catalogue large et varié, pensé pour choisir un film selon l'émotion recherchée (rire, frissonner, réfléchir, s'évader…), avec une application de recommandation de films.
+Réponse du Groupe 3 à l'appel à projets du CNC : un cinéma tous publics au cœur du 3e arrondissement de Paris (le Marais), qui remet à l'affiche les grands classiques de toutes les époques et des films très bien notés, en séances spéciales, cycles et ciné-clubs, avec une application de recommandation de films.
 
-Équipe : [Prénom 1], [Prénom 2], [Prénom 3], Benjamin
+Équipe : Mariame, Hélène, Benjamin P., Benjamin F.
 Soutenance : lundi 7 décembre 2026
 
 📁 Structure du dépôt
 Projet-2-CNC/
-├── data/                  # Données locales (NON versionnées, voir .gitignore)
+├── catalogue/
+│   └── films.csv          # Catalogue final (3 323 films), partagé avec le groupe
+├── data/                  # Données brutes locales (NON versionnées, voir .gitignore)
 ├── notebooks/
 │   └── analyse_data.ipynb # Préparation des données : fichiers bruts → catalogue
-├── app/                   # Application Streamlit (à venir)
+├── app/                   # Application Streamlit (en cours)
 ├── requirements.txt       # Dépendances Python
 └── README.md
 ⚙️ Installation
@@ -27,36 +29,68 @@ Mac / Linux : source .venv/bin/activate
 3. Installer les dépendances
 bash
 pip install -r requirements.txt
-🗂️ Données
-
-Les données ne sont pas dans le dépôt (trop volumineuses).
-
+🗂️ Données sources
 Source	Fichiers	Comment les obtenir
-IMDb	title.basics, title.ratings, title.akas	Lus directement en ligne depuis datasets.imdbws.com : rien à télécharger
+IMDb	title.basics, title.ratings, title.akas, title.principals, name.basics	Lus directement en ligne depuis datasets.imdbws.com : rien à télécharger
 TMDB	TMDB_movie_dataset_v11.csv	Lien Drive fourni sur Simplonline → à placer dans data/
 
-⚠️ Créer le dossier data/ à la racine du projet s'il n'existe pas, puis y déposer le fichier TMDB.
+⚠️ Créer le dossier data/ à la racine du projet s'il n'existe pas, puis y déposer le fichier TMDB. Le catalogue final (catalogue/films.csv) est déjà dans le dépôt : pas besoin de relancer le notebook pour utiliser l'application.
 
 🧹 Préparation des données
 
-Notebook : notebooks/analyse_data.ipynb. Le lancer de haut en bas (Restart → Run All).
+Notebook : notebooks/analyse_data.ipynb. Le lancer de haut en bas (Restart → Run All). Les gros fichiers IMDb (akas, principals, name.basics) sont lus par morceaux (chunksize) : compter plusieurs minutes.
 
-Règles de filtrage du catalogue
-Filtre	Règle	Justification
-Type	titleType == "movie"	Uniquement des films de cinéma (exclut séries, épisodes, courts métrages)
-Contenu adulte	isAdult == 0	Cinéma tout public
-Année	startYear >= 1920	Des classiques aux films récents
-Notoriété	numVotes >= 5 000	Films reconnus par le public
-Qualité	averageRating >= 7.5	Films bien notés
+Entonnoir de filtrage
+Étape	Règle	Films restants
+Point de départ	Titres IMDb notés (basics × ratings)	1 734 008
+Type	titleType == "movie" : longs métrages uniquement	352 019
+Notoriété	numVotes >= 5 000 : assez de votes pour une note fiable	19 291
+Qualité	averageRating >= 7.5 : films très bien notés	3 323
+Tout public	isAdult == 0	3 323
 
-Résultat : [X] films au départ → [X] films dans le catalogue final.
+Pas de filtre d'année ni de durée : le catalogue couvre toutes les époques (de 1916 à 2026).
 
 Titres français
-Source : title.akas, filtré sur region == "FR" (et non language == "fr", qui renvoie surtout des titres québécois).
-Films sans titre FR : on garde le titre d'origine (primaryTitle).
+Source : title.akas, filtré sur region == "FR", et non language == "fr", qui renvoie surtout des titres québécois.
+2 705 films (≈ 81 %) ont un titre France. Les autres gardent leur titre international (primaryTitle).
+Contrôle : tt0111161 → Les Évadés (et non À l'ombre de Shawshank, le titre québécois).
+Enrichissement TMDB
+Jointure tconst (IMDb) = imdb_id (TMDB), en left join : aucun film du catalogue n'est perdu.
+Doublons TMDB : pour un même film, on garde la ligne avec le plus de votes (vote_count).
+143 films sans affiche (absents de TMDB, ou présents sans affiche).
 Films français
+Règle : la France figure parmi les pays de production (production_countries contient « France »).
+397 films (11,9 %).
+⚠️ Limite : les coproductions comptent. Un film étranger coproduit avec la France est compté comme français.
+Distribution
+Source : title.principals + name.basics.
+Les 3 premiers acteurs ou actrices au générique (ordering), et le ou les réalisateurs.
+Contrôles qualité
+Lecture : séparateur tabulation, \N converti en valeur manquante, types numériques corrigés (to_numeric, puis Int64).
+0 valeur manquante sur l'année et la durée.
+0 doublon : une ligne par film.
+Valeurs cohérentes : notes de 7,5 à 9,8, de 5 000 à 3,3 M de votes, durées de 45 à 566 min.
+📋 Dictionnaire du catalogue (catalogue/films.csv)
+Colonne	Description
+tconst	Identifiant IMDb du film (clé unique)
+titre_international	Titre le plus courant sur IMDb (souvent anglais)
+titre_affiche	Titre affiché au public : titre France s'il existe, sinon titre international
+annee_sortie	Année de sortie
+duree_min	Durée en minutes
+genres	Jusqu'à 3 genres, séparés par une virgule
+note_moyenne	Note moyenne IMDb (sur 10)
+nombre_votes	Nombre de votes IMDb
+original_language	Langue d'origine (TMDB)
+production_countries	Pays de production, en anglais (TMDB)
+production_companies	Sociétés de production (TMDB)
+overview	Résumé du film (TMDB)
+poster_path	Fin du chemin de l'affiche (TMDB)
+affiche_url	Adresse complète de l'affiche (500 px)
+film_francais	True si la France figure parmi les pays de production
+acteurs	Les 3 premiers acteurs ou actrices au générique
+realisateurs	Réalisateur(s)
 
-[Méthode retenue avec TMDB + sa limite : à compléter]
+💡 Import dans Power BI : choisir les paramètres régionaux Anglais (États-Unis), car les décimales sont écrites avec un point.
 
 🎯 Recommandation
 
@@ -68,8 +102,6 @@ streamlit run app/app.py
 
 L'application s'ouvre dans le navigateur (par défaut : http://localhost:8501).
 
-[Adapter le chemin si le fichier de l'app change de nom]
-
 🛠️ Outils
 
-Python · pandas · scikit-learn · Streamlit · [Power BI / Looker Studio / Tableau] · GitHub
+Python · pandas · scikit-learn · Streamlit · Power BI · GitHub
