@@ -9,6 +9,8 @@ Lancement, depuis la racine du projet :
 from pathlib import Path
 import pandas as pd
 import streamlit as st
+from sklearn.neighbors import NearestNeighbors
+from sklearn.preprocessing import MinMaxScaler
 
 # =============================================================================
 # 1. CONFIGURATION
@@ -158,6 +160,18 @@ def genres_fr(genres):
 
 df = charger_donnees(FICHIER)
 
+@st.cache_data
+def preparer_X(df):
+    """Features du modèle : genres en 0/1 + note, année, durée ramenées entre 0 et 1."""
+    genres = df["genres"].str.get_dummies(sep=",")
+    colonnes = ["note_moyenne", "annee_sortie", "duree_min"]
+    chiffres = pd.DataFrame(MinMaxScaler().fit_transform(df[colonnes]),
+                            columns=colonnes, index=df.index)
+    return pd.concat([genres, chiffres], axis=1)
+
+X = preparer_X(df)
+
+
 if "film_choisi" not in st.session_state:
     st.session_state["film_choisi"] = None
 
@@ -284,14 +298,13 @@ def rangee(titre, films, nb=6, cle=""):
 
 
 def films_similaires(film, catalogue, nb=6):
-    """
-    PROVISOIRE : films de la même salle, classés par nombre de genres en commun puis par note.
-    À remplacer par le modèle de recommandation (machine learning).
-    """
-    genres_film = set(film["genres"].split(","))
-    candidats = catalogue[(catalogue[f"emo_{emotion}"]) & (catalogue["tconst"] != film["tconst"])].copy()
-    candidats["genres_communs"] = candidats["genres"].apply(lambda g: len(genres_film & set(g.split(","))))
-    return candidats.sort_values(["genres_communs", "note_moyenne"], ascending=False).head(nb)
+    """Recommandation par KNN : les 20 films les plus proches dans la salle choisie, puis nb tirés au hasard."""
+    masque = (catalogue[f"emo_{emotion}"]) & (catalogue["tconst"] != film["tconst"])
+    nn = NearestNeighbors(n_neighbors=min(20, masque.sum()))
+    nn.fit(X[masque])
+    distances, indices = nn.kneighbors(X.loc[[film.name]])
+    proches = catalogue[masque].iloc[indices[0]]
+    return proches.sample(min(nb, len(proches)))
 
 
 def fiche(tconst):
