@@ -94,7 +94,30 @@ realisateurs	Réalisateur(s)
 
 🎯 Recommandation
 
-[Colonnes utilisées, méthode, justification : à compléter]
+Notebook : notebooks/recommandation_ML.ipynb · intégrée dans app/app2.py (fonction films_similaires)
+
+Principe : quand le spectateur ouvre la fiche d'un film qu'il aime, l'application lui propose des films proches, dans la salle de l'émotion choisie.
+
+Colonnes utilisées (features)
+- genres : transformés en 23 colonnes 0/1 (get_dummies)
+- note_moyenne, annee_sortie, duree_min : ramenées entre 0 et 1 (MinMaxScaler), pour qu'aucune ne pèse plus que les autres
+→ matrice X de 3 323 films × 26 colonnes
+
+Méthode
+- Modèle non supervisé : NearestNeighbors (scikit-learn), distance euclidienne
+- On cherche les 20 films les plus proches du film aimé, parmi ceux de l'émotion choisie
+- On en tire 6 au hasard : des propositions pertinentes, mais qui varient à chaque visite
+
+Pourquoi ce choix
+- Aucune donnée client (démarrage à froid) : on se base uniquement sur les caractéristiques des films
+- Pas de « bonne réponse » à prédire : le non supervisé est adapté
+
+Essai supervisé
+- KNeighborsClassifier (80 % entraînement / 20 % test) pour prédire les émotions : score de 0,95
+- Score trop beau : les colonnes emo_ sont déduites des genres, donc le modèle connaissait déjà la réponse (fuite de données). On a gardé l'approche non supervisée.
+
+Pistes d'amélioration
+- Ajouter les réalisateurs et les acteurs aux features
 
 🚀 Lancer l'application
 bash
